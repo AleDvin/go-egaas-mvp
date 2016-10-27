@@ -49,12 +49,12 @@ func (c *Controller) AjaxSignIn() interface{} {
 		return result
 	}
 	//Test
-	if stateId == 0 {
+	/*if stateId == 0 {
 		citizen, err := c.Single(`SELECT count(id) FROM "1_citizens"`).Int64()
 		if err == nil && citizen > 0 {
 			stateId = 1
 		}
-	}
+	}*/
 	sign, _ := hex.DecodeString(c.r.FormValue("sign"))
 	var msg string
 	switch uid := c.sess.Get(`uid`).(type) {

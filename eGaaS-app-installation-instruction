@@ -1,0 +1,18 @@
+eGaaS app installation instruction
+
+1. Download and install PostgreSQL https://www.postgresql.org/download/windows/. In order to connect to the database, you must enter the password upon the eGaaS application setting. 
+2. Run pgAdmin, right click on the Databases and create a new database.
+3. Download and install eGaasS app http://egaas.org/download.html:
+  - v 1.0 - the consistent one, to work with EGS tokens. It is available both in Lite version and in node control mode. 
+  - v 0.1 - the inconsistent one, and therefore running on private blockchains.
+4. During the installation of v 0.1: 
+  - the name of the database created in PostgreSQL (pay attention to the DB name register)
+  - the PostgreSQL password
+  Close the window and run the app.
+5. To access the app in v 1.0, create a new account
+  - generate and remember the seed
+  - enter the password
+  - on the next page, confirm the seed and password entered.
+6. To access v 0.1 
+  - enter the password twice;
+  - click on the Import account button.

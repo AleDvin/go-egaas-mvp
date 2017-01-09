@@ -1,13 +1,14 @@
 SetVar(
 	global = 0,
 	type_new_page_id = TxId(NewPage),
+	type_append_page_id = TxId(AppendPage),
 	type_new_menu_id = TxId(NewMenu),
+	type_append_menu_id = TxId(AppendMenu),
 	type_new_contract_id = TxId(NewContract),
 	type_new_state_params_id = TxId(NewStateParameters), 
-	type_new_table_id = TxId(NewTable),
-	type_append_menu_id = TxId(AppendMenu),
+	type_new_table_id = TxId(NewTable),	
 	sc_conditions = "$citizen == #wallet_id#")
-SetVar(`sc_ SLStartVoting = contract SLStartVoting {
+SetVar(`sc_SLStartVoting = contract SLStartVoting {
 	data {
 		SmartLaws string
 		SmartLawsId int
@@ -15,8 +16,9 @@ SetVar(`sc_ SLStartVoting = contract SLStartVoting {
 	}
 	func conditions {
 		var x int
-		x = DBIntWhere(Table("ge_person_position"), "id", "citizen_id=$ and position_id=3", $citizen)
-		if x == 0 {
+		//x = DBIntWhere(Table("ge_person_position"), "id", "citizen_id=$ and position_id=3", $citizen)
+		x = DBIntExt(Table("state_parameters"), "value", "gov_account", "name")
+		if x != $citizen {
 			info "You do not have the right to put to vote"
 		}
 
@@ -69,10 +71,23 @@ SetVar(`sc_ SLStartVoting = contract SLStartVoting {
     Date_stop_voting string "date"
     PositionId int
  }
+ 
+func conditions {
 
+	    var x int
+	    x = DBIntExt(Table("state_parameters"), "value", "gov_account", "name")
+	    
+		if x != $citizen {
+			info "You do not have the right to do it"
+		}
+	    x=DBIntWhere( Table("ge_campaigns"), "id", "type_id=$ and status!=4", $PositionId)
+
+		if x != 0  {
+			info "Previous election campaign is not over yet"
+		}
+	} 
 func action {
-    DBInsert(Table( "ge_campaigns"), "name,date_start,candidates_deadline,date_start_voting,date_stop_voting, position_id,num_votes",$ElectionName, $DateStart,$CandidatesDeadline,$Date_start_voting,$Date_stop_voting,$PositionId,0)
-    
+    DBInsert(Table( "ge_campaigns"), "name,date_start,candidates_deadline,date_start_voting,date_stop_voting, position_id,num_votes,type_id,status",$ElectionName, $DateStart,$CandidatesDeadline,$Date_start_voting,$Date_stop_voting,$PositionId,0,$PositionId,0)
   } 
 }`,
 `sc_GEVoting = contract GEVoting {
@@ -136,6 +151,12 @@ func action {
       info "Resalt is not available now"
     }
     
+	    x = DBIntExt(Table("state_parameters"), "value", "gov_account", "name")
+	    
+		if x != $citizen {
+			info "You do not have the right to do it"
+		}
+    
     x=DBIntExt( Table("ge_campaigns"), "status", $CampaignId, "id")
     if x==1 {
        info "Resalt is ready"
@@ -150,7 +171,7 @@ func action {
         var war map
         var i int
         var len int
-        list = DBGetList("1_ge_candidates", "id,candidate,citizen_id,position_id",0,100,"counter desc", "id_election_campaign=$", $CampaignId)
+        list = DBGetList(Table("ge_candidates"), "id,candidate,citizen_id,position_id",0,100,"counter desc", "id_election_campaign=$", $CampaignId)
         len = Len(list)
         while i < len {
             war = list[i]
@@ -179,8 +200,9 @@ func action {
 	func conditions {
 	    var x int
 	    
-	    x=DBIntWhere( Table("ge_person_position"), "id", "citizen_id=$ and position_id=3", $citizen)
-		if x == 0 {
+	    //x=DBIntWhere( Table("ge_person_position"), "id", "citizen_id=$ and position_id=3", $citizen)
+	    x = DBIntExt(Table("state_parameters"), "value", "gov_account", "name")
+		if x != $citizen {
 			info "You do not have the right to sign"
 		}	
 		
@@ -223,8 +245,9 @@ func action {
 	func conditions {
 		
 		 var x int
-	     x=DBIntWhere( Table("ge_person_position"), "id", "citizen_id=$ and position_id=3", $citizen)
-		if x == 0 {
+	    //x=DBIntWhere( Table("ge_person_position"), "id", "citizen_id=$ and position_id=3", $citizen)
+	    x = DBIntExt(Table("state_parameters"), "value", "gov_account", "name")
+		if x != $citizen {
 			info "You do not have the right to edit"
 		}	
 		x=DBIntWhere( Table("laws_edition"), "id", "id=$ and status>0", $TabId)
@@ -244,8 +267,9 @@ func action {
 	}
 	func conditions {
 	    var x int
-	    x=DBIntWhere( Table("ge_person_position"), "id", "citizen_id=$ and position_id=3", $citizen)
-		if x == 0 {
+	    //x=DBIntWhere( Table("ge_person_position"), "id", "citizen_id=$ and position_id=3", $citizen)
+	    x = DBIntExt(Table("state_parameters"), "value", "gov_account", "name")
+		if x != $citizen {
 			info "You do not have the right to do it"
 		}
 		
@@ -276,14 +300,16 @@ func action {
 
 
 		var x int
+		var y int
 		
-	    x=DBIntWhere( Table("ge_person_position"), "id", "citizen_id=$ and position_id=1", $citizen)
+	    x = DBIntWhere( Table("ge_person_position"), "id", "citizen_id=$ and position_id=1", $citizen)
+	    y = DBIntExt(Table("state_parameters"), "value", "gov_account", "name")
 
-		if x == 0 {
+		if x == 0 && y != $citizen {
 			info "You are not Assembly representative"
 		}
 		
-        x=DBIntWhere( Table("sl_votes"), "id", "citizen_id=$ and laws_id=$", $citizen, $SmartLawsId)
+        x = DBIntWhere( Table("sl_votes"), "id", "citizen_id=$ and laws_id=$", $citizen, $SmartLawsId)
 
 		if x != 0 {
 			info "You already voted"
@@ -316,13 +342,20 @@ func action {
 	func conditions {
 
 		var x int
-		 x=DBIntWhere( Table("laws_edition"), "id", "laws_id=$ and status!=1", $SmartLawsId)
-		if x != 0 {
-			 info "This law is not put to vote"
+		// x=DBIntWhere( Table("laws_edition"), "id", "laws_id=$ and status!=1", $SmartLawsId)
+		//if x != 0 {
+		//	 info "This law is not put to vote"
+		//}
+		
+		x = DBIntWhere(Table("sl_votes"),"count(id)","id_voting=$",$TabId)
+		
+		if x < 3 {
+			info "Voted insufficient number of representatives"
 		}
 		
-		x=DBIntWhere( Table("ge_person_position"), "id", "citizen_id=$ and position_id=3", $citizen)
-		if x == 0 {
+		//x=DBIntWhere( Table("ge_person_position"), "id", "citizen_id=$ and position_id=3", $citizen)
+		x = DBIntExt(Table("state_parameters"), "value", "gov_account", "name")
+		if x != $citizen {
 			info "You do not have the right to stop vote"
 		}
 
@@ -351,7 +384,7 @@ func action {
 
 	}
 }`)
-TextHidden( sc_ SLStartVoting, sc_GECandidateRegistration, sc_GENewElectionCampaign, sc_GEVoting, sc_GEVotingResalt, sc_LSSignature, sc_SLEdit, sc_SLNewVoting, sc_SLVoting, sc_SLVotingResalt)
+TextHidden( sc_SLStartVoting, sc_GECandidateRegistration, sc_GENewElectionCampaign, sc_GEVoting, sc_GEVotingResalt, sc_LSSignature, sc_SLEdit, sc_SLNewVoting, sc_SLVoting, sc_SLVotingResalt)
 SetVar(`p_GECampaigns #= Title: Election Campaigns
 Navigation(LiTemplate(GEElections, Elections), Campaigns)
 Divs(md-12, panel panel-default)
@@ -359,7 +392,7 @@ Divs(md-12, panel panel-default)
         Divs(panel-title table-responsive)
 
 Table {
-	Table: 1_ge_campaigns
+	Table: #state_id#_ge_campaigns
 	Order: id
 	//Where: date_stop_voting > now()
 	Columns: [
@@ -367,7 +400,7 @@ Table {
 		[Start, Date(#date_start#, YYYY.MM.DD)],
 		[Deadline
 			for candidates, Date(#candidates_deadline#, YYYY.MM.DD)],
-	    [Candidate Registration,If(And(#CmpTime(#date_start#, Now(datetime)) == -1, #CmpTime(#candidates_deadline#, Now(datetime)) == 1), BtnTemplate(GECandidateRegistration,Go,"CampaignName:'#name#',CampaignId:#id#,PositionId:#position_id#"), "Finish")],
+	    [Candidate Registration,If(And(#CmpTime(#date_start#, Now(datetime)) == -1, #CmpTime(#candidates_deadline#, Now(datetime)) == 1), BtnTemplate(GECandidateRegistration,Go,"CampaignName:'#name#',CampaignId:#id#,PositionId:#position_id#"), "--")],
 	     [Candidate,BtnTemplate(GECanditatesView, View,"CampaignId:#id#,Position:'#name#'")],
 		[Start Voting, DateTime(#date_start_voting#, YYYY.MM.DD HH:MI)],
 		[Stop Voting, DateTime(#date_stop_voting#, YYYY.MM.DD HH:MI)],
@@ -413,7 +446,7 @@ Divs(md-6, panel panel-default panel-body)
     Divs(panel-heading)
         Divs(panel-title)
 Table{
-         Table: 1_ge_candidates
+         Table: #state_id#_ge_candidates
          Where: id_election_campaign = #CampaignId#
       Columns: [[candidate, #candidate#], [Description, #description#]]
      }
@@ -429,7 +462,7 @@ Divs(md-6, panel panel-default panel-body)
         MarkDown: Candidate to #Position#
 
 Table{
-         Table: 1_ge_candidates
+         Table: #state_id#_ge_candidates
          Where: id_election_campaign = #CampaignId#
       Columns: [[Candidate, #candidate#], [Description, #description#]]
      }
@@ -445,7 +478,7 @@ Divs(md-8, panel panel-default panel-body)
     Divs(panel-heading)
         Divs(panel-title)
 Table {
-	Table: 1_ge_elective_office
+	Table: #state_id#_ge_elective_office
 	Columns: [[ID, #id#],[Election 's Type, #name#], 
 [Last election, Date(#last_election#, YYYY / MM / DD)],
 [Start,BtnTemplate(GENewCampaign,Go,"ElectionName:'#name#',PositionId:#id#")]]
@@ -466,22 +499,22 @@ Divs(md-6, panel panel-default panel-body)
     Divs(md-12,help-block)
     MarkDown: Start Date  
     DivsEnd:
-    InputDate(DateStart,form-control input-lg,2017/01/04 00:00)
+    InputDate(DateStart,form-control input-lg,Now(YYYY.MM.DD))
     Divs(md-12,help-block)
     MarkDown:Deadline for candidates   
     DivsEnd:
-    InputDate(CandidatesDeadline,form-control input-lg,2017/01/06 00:00)
+    InputDate(CandidatesDeadline,form-control input-lg,Now(YYYY.MM.DD,5 days))
     Divs(md-12,help-block)
     MarkDown: Start Voting   
     DivsEnd:
-    InputDate(Date_start_voting,form-control input-lg,2017/01/07 07:00)
+    InputDate(Date_start_voting,form-control input-lg,Now(YYYY.MM.DD 08:00,10 days))
     Divs(md-12,help-block)
     MarkDown: Stop Voting  
     DivsEnd:
-    InputDate(Date_stop_voting,form-control input-lg,2017/01/07 22:00)
+    InputDate(Date_stop_voting,form-control input-lg,Now(YYYY.MM.DD 22:00,10 days))
     
     Input(ElectionName, "hidden", text, text, "Representative")
-     Input(PositionId, "hidden", text, text, 1)
+    Input(PositionId, "hidden", text, text, 1)
      Divs(md-12,help-block)
      DivsEnd:
     TxButton{Contract: GENewElectionCampaign,Inputs:"ElectionName=ElectionName,PositionId=PositionId,DateStart=DateStart,CandidatesDeadline=CandidatesDeadline,Date_start_voting=Date_start_voting,Date_stop_voting", OnSuccess: "template,GECampaigns"}
@@ -498,7 +531,7 @@ Navigation( Representatives )
 
 
 Table{
-    Table: 1_ge_person_position
+    Table: #state_id#_ge_person_position
     Where: position_id=3
       Columns: [
       [Name, #name#],
@@ -507,7 +540,7 @@ Table{
      }
 
 Table{
-    Table: 1_ge_person_position
+    Table: #state_id#_ge_person_position
     Where: position_id=1
       Columns: [
       [Name, #name#],
@@ -549,7 +582,7 @@ Divs(md-8, panel panel-default panel-body)
     Divs(panel-heading)
         Divs(panel-title)
 Table{
-         Table: 1_ge_candidates
+         Table: #state_id#_ge_candidates
          Where: id_election_campaign = #CampaignId#
          Order: candidate
       Columns: [[candidate, #candidate#], [Description, #description#], [Vote,BtnTemplate(GEVoteConfirmation,For,"ChoiceId:#id#,CampaignId:#CampaignId#,CandidateId:#citizen_id#,Candidate:'#candidate#',Campaign:'#campaign#',Result:1")]]
@@ -561,14 +594,14 @@ PageEnd:`,
 `p_GEVotingResalt #= Title : Voting Result
 Navigation( Voting Result )
 Divs(md-6, panel panel-default panel-body)        
-        	ChartBar{Table: 1_ge_candidates, FieldValue: counter, FieldLabel: candidate, Colors: "7266ba,fad732,23b7e5", Where: id_election_campaign = #CampaignId#, Order: id DESC}
+        	ChartBar{Table: #state_id#_ge_candidates, FieldValue: counter, FieldLabel: candidate, Colors: "7266ba,fad732,23b7e5", Where: id_election_campaign = #CampaignId#, Order: id DESC}
 DivsEnd: 
 Divs(md-6, panel panel-default panel-body)
     Divs(panel-heading)
         Divs(panel-title)
 
 Table{
-         Table: 1_ge_candidates
+         Table: #state_id#_ge_candidates
          Where: id_election_campaign = #CampaignId#
       Columns: [[Candidate, #candidate#], [Description, #description#], [Votes,#counter#],[Result,#result#]]
      }
@@ -596,7 +629,7 @@ Divs(md-6, panel panel-default panel-body data-sweet-alert)
         Divs(panel-title data-sweet-alert)
  MarkDown: <h4>Speaker</h4>
 Table{
-    Table: 1_ge_person_position
+    Table: #state_id#_ge_person_position
     Where: position_id=3
       Columns: [
     [Name, #name#],
@@ -612,7 +645,7 @@ Divs(md-6, panel panel-default panel-body)
 
  MarkDown: <h4>Representatives</h4>
 Table{
-    Table: 1_ge_person_position
+    Table: #state_id#_ge_person_position
     Where: position_id=1
       Columns: [
       [Name, #name#],
@@ -705,32 +738,35 @@ Divs(md-12, panel panel-default panel-body)
     MarkDown : <h4>#SmartLaws#</h4>    
 
         Form()
-        Source(LawsValue, GetOne(value, 1_laws_edition, "id", #TabId#))
+        Source(LawsValue, GetOne(value, #state_id#_laws_edition, "id", #TabId#))
         Input(TabId, "hidden", text, text, #TabId#)
           
        TxButton{Contract:SLEdit,Inputs:"LawsValue=LawsValue,TabId=TabId", OnSuccess: "template,SLVotingList"}
        FormEnd:   
 DivsEnd:
 PageEnd:`,
-`p_SLList #= Title: Smart Laws  
-Navigation( LiTemplate(Legislature, Legislature), Smart Laws )
+`p_SLList #= Title : New Voting of Law 
+Navigation( New Voting of Law )
 
-Divs(md-8, panel panel-default panel-body)
+
+
+Divs(md-6, panel panel-default panel-body)
     Divs(panel-heading)
         Divs(panel-title)
-Table{
-   
-      Table: 1_sl_list
-      Order:date_adoption
-      Columns: [[Law, #text_name#],
-      [Adoption,DateTime(#date_adoption#, YYYY.MM.DD)],[Last edition,DateTime(#date_last_edition#, YYYY.MM.DD)]
-      [Amend,BtnTemplate(LSAddVoting,Go,"SmartLaws:'#text_name#',SmartLawsId:#id_smart_contract#")]]
-     }  
+           MarkDown: The Amendment to the Law  
+           MarkDown: <h1>Voting in Legislature</h1>
+           MarkDown: confirm your action by pressing the 'Send' button
+          
+        Form()
+        Input(SmartLawsId, "hidden", text, text, 14)
+        Input(SmartLaws, "hidden", text, text, "Voting in Legislature")
+          
+            TxButton{Contract: SLNewVoting,Inputs:"SmartLaws=SmartLaws,SmartLawsId=SmartLawsId, ChoiceId=ChoiceId, CampaignId=CampaignId", OnSuccess: "template,SLVotingList"}
+           
+        FormEnd:   
         DivsEnd:
     DivsEnd:
 DivsEnd:
-
-
 
 PageEnd:`,
 `p_SLRepresentativeVoting #= Title: Result of voting of Law "#SmartLaws#" 
@@ -741,7 +777,7 @@ Divs(md-4, panel panel-default panel-body)
         Divs(panel-title)
         
 Table{
-         Table: 1_sl_votes
+         Table: #state_id#_sl_votes
           Where: id_voting = #TabId#
       Columns: [[Name, #citizen_name#],[Vote,If(#choice#<1,"For","Against")]]
      }   
@@ -752,7 +788,7 @@ DivsEnd:
 
 
 Divs(md-6, panel panel-default panel-body)
-ChartPie{Table: 1_sl_result, FieldValue: percents, FieldLabel: choise, Colors: "5d9cec,fad732,37bc9b,f05050,23b7e5,ff902b,f05050,131e26,37bc9b,f532e5,7266ba,3a3f51,fad732,232735,3a3f51,dde6e9,e4eaec,edf1f2", Where: id_laws_edition = #TabId#, Order: choise DESC}
+ChartPie{Table: #state_id#_sl_result, FieldValue: percents, FieldLabel: choise, Colors: "5d9cec,fad732,37bc9b,f05050,23b7e5,ff902b,f05050,131e26,37bc9b,f532e5,7266ba,3a3f51,fad732,232735,3a3f51,dde6e9,e4eaec,edf1f2", Where: id_laws_edition = #TabId#, Order: choise DESC}
 DivsEnd:
 
 
@@ -775,7 +811,7 @@ Divs(md-6, panel panel-default panel-body)
         Input(TabId, "hidden", text, text, #TabId#)
         
           
-            TxButton{Contract: SLStartVoting,Inputs:"SmartLaws=SmartLaws,SmartLawsId=SmartLawsId,TabId=TabId", OnSuccess: "template,SLVotingList"}
+            TxButton{Contract:SLStartVoting,Inputs:"SmartLaws=SmartLaws,SmartLawsId=SmartLawsId,TabId=TabId", OnSuccess: "template,SLVotingList"}
            
         FormEnd:   
         DivsEnd:
@@ -790,7 +826,7 @@ Divs(md-12, panel panel-default panel-body)
 MarkDown : <h4>#SmartLaws#</h4>   
 
     Form()
-    Source(LawsValue, GetOne(value, 1_laws_edition, "id", #TabId#))
+    Source(LawsValue, GetOne(value, #state_id#_laws_edition, "id", #TabId#))
 
     FormEnd: 
         
@@ -804,7 +840,7 @@ Divs(md-12, panel panel-default panel-body)
         Divs(panel-title)
 
 Table{
-         Table: 1_laws_edition
+         Table: #state_id#_laws_edition
          Order: status
       Columns: [[Law, #name#]
       [Text,If(#status#==0, BtnTemplate(SLEdit,Edit,"SmartLaws:'#name#',SmartLawsId:#laws_id#,TabId:#id#"),BtnTemplate(SLView,View,"SmartLaws:'#name#',SmartLawsId:#laws_id#,TabId:#id#"))],
@@ -850,26 +886,21 @@ PageEnd:`)
 TextHidden( p_GECampaigns, p_GECandidateRegistration, p_GECandidates, p_GECanditatesView, p_GEElections, p_GENewCampaign, p_GEPersonsPosition, p_GEVoteConfirmation, p_GEVoting, p_GEVotingResalt, p_Legislature, p_LSAddVoting, p_LSSignature, p_LSVoting, p_SLEdit, p_SLList, p_SLRepresentativeVoting, p_SLStartVoting, p_SLView, p_SLVotingList, p_SLVotingResalt)
 SetVar(`m_Elections = [Government dashboard](government)
 [Legislature dashboard](Legislature)
-[Elections](GEElections)
-[Campaigns](GECampaigns)
 [Start Election](GENewCampaign)
-[Smart contracts](sys.contracts)
-`,
- `m_Legislature = [Government dashboard](government)
- [Legislature dashboard](Legislature)
- [Smart Laws](SLList)
- [Laws Voting List](SLVotingList)`,
-`menu_1 #=
-[Election Campaigns](GECampaigns)`,
- `menu_2 #=
-[Legislature](Legislature)
-[Election](GEElections)`)
-
-TextHidden( m_Elections, m_Legislature, menu_1, menu_2)
+[Campaigns](GECampaigns)`,
+`m_Legislature = [Government dashboard](government)
+[Legislature dashboard](Legislature)
+[Smart Law](SLList)
+[Laws Voting List](SLVotingList)`)
+TextHidden( m_Elections, m_Legislature)
 SetVar()
-Json(`Head: "Elections",
+TextHidden( )
+SetVar(`am_government #= [Start Election](GENewCampaign)
+[Legislature dashboard](Legislature)`)
+TextHidden( am_government)
+Json(`Head: "",
 Desc: "General Elections and votes in the Legislature",
-		Img: "/static/img/apps/elections.jpg",
+		Img: "/static/img/apps/elections.png",
 		OnSuccess: {
 			script: 'template',
 			page: 'government',
@@ -882,7 +913,7 @@ Desc: "General Elections and votes in the Legislature",
 			typeid: #type_new_table_id#,
 			global: 0,
 			table_name : "ge_campaigns",
-			columns: '[["position_id", "int64", "1"],["date_stop_voting", "time", "1"],["date_start_voting", "time", "1"],["candidates_deadline", "time", "1"],["name", "text", "0"],["status", "int64", "1"],["num_votes", "int64", "0"],["date_start", "time", "1"]]',
+			columns: '[["date_start", "time", "1"],["date_start_voting", "time", "1"],["date_stop_voting", "time", "1"],["candidates_deadline", "time", "1"],["name", "text", "0"],["status", "int64", "1"],["type_id", "int64", "1"],["num_votes", "int64", "0"],["position_id", "int64", "1"]]',
 			permissions: "$citizen == #wallet_id#"
 			}
 	   },
@@ -893,7 +924,7 @@ Desc: "General Elections and votes in the Legislature",
 			typeid: #type_new_table_id#,
 			global: 0,
 			table_name : "ge_candidates",
-			columns: '[["id_election_campaign", "int64", "1"],["result", "int64", "1"],["counter", "int64", "1"],["campaign", "text", "0"],["description", "text", "0"],["position_id", "int64", "1"],["application_date", "time", "0"],["candidate", "text", "0"],["citizen_id", "int64", "1"]]',
+			columns: '[["counter", "int64", "1"],["candidate", "text", "0"],["position_id", "int64", "1"],["description", "text", "0"],["application_date", "time", "0"],["id_election_campaign", "int64", "1"],["result", "int64", "1"],["campaign", "text", "0"],["citizen_id", "int64", "1"]]',
 			permissions: "$citizen == #wallet_id#"
 			}
 	   },
@@ -915,7 +946,18 @@ Desc: "General Elections and votes in the Legislature",
 			typeid: #type_new_table_id#,
 			global: 0,
 			table_name : "ge_person_position",
-			columns: '[["position_id", "int64", "1"],["name", "text", "0"],["date_end", "time", "1"],["position", "text", "0"],["citizen_id", "int64", "1"],["date_start", "time", "1"]]',
+			columns: '[["name", "text", "0"],["date_end", "time", "1"],["position", "text", "0"],["citizen_id", "int64", "1"],["date_start", "time", "1"],["position_id", "int64", "1"]]',
+			permissions: "$citizen == #wallet_id#"
+			}
+	   },
+{
+		Forsign: 'global,table_name,columns',
+		Data: {
+			type: "NewTable",
+			typeid: #type_new_table_id#,
+			global: 0,
+			table_name : "ge_vote",
+			columns: '[["hash", "hash", "1"],["time", "time", "1"],["id_candidate", "int64", "1"]]',
 			permissions: "$citizen == #wallet_id#"
 			}
 	   },
@@ -926,7 +968,7 @@ Desc: "General Elections and votes in the Legislature",
 			typeid: #type_new_table_id#,
 			global: 0,
 			table_name : "ge_votes",
-			columns: '[["hash", "text", "0"],["time", "time", "1"],["sha256", "hash", "1"],["strhash", "hash", "1"],["userhash", "hash", "1"],["id_candidate", "int64", "1"]]',
+			columns: '[["sha256", "hash", "1"],["strhash", "hash", "1"],["userhash", "hash", "1"],["id_candidate", "int64", "1"],["hash", "text", "0"],["time", "time", "1"]]',
 			permissions: "$citizen == #wallet_id#"
 			}
 	   },
@@ -937,7 +979,7 @@ Desc: "General Elections and votes in the Legislature",
 			typeid: #type_new_table_id#,
 			global: 0,
 			table_name : "laws_edition",
-			columns: '[["law_id", "int64", "1"],["status", "int64", "1"],["date_start", "time", "1"],["resalt_for", "int64", "1"],["resalt_voting", "int64", "1"],["result_against", "int64", "1"],["date_voting_stop", "time", "1"],["name", "text", "0"],["value", "text", "0"],["laws_id", "int64", "1"],["date_end", "time", "1"],["conditions", "text", "0"],["date_voting_start", "time", "1"]]',
+			columns: '[["resalt_for", "int64", "1"],["resalt_voting", "int64", "1"],["result_against", "int64", "1"],["name", "text", "0"],["status", "int64", "1"],["date_end", "time", "1"],["conditions", "text", "0"],["date_start", "time", "1"],["date_voting_stop", "time", "1"],["date_voting_start", "time", "1"],["value", "text", "0"],["law_id", "int64", "1"],["laws_id", "int64", "1"]]',
 			permissions: "$citizen == #wallet_id#"
 			}
 	   },
@@ -948,7 +990,7 @@ Desc: "General Elections and votes in the Legislature",
 			typeid: #type_new_table_id#,
 			global: 0,
 			table_name : "sl_list",
-			columns: '[["text_name", "text", "0"],["date_adoption", "time", "1"],["date_last_edition", "time", "1"],["id_smart_contract", "int64", "1"],["date_submission_draft", "time", "1"]]',
+			columns: '[["date_adoption", "time", "1"],["date_last_edition", "time", "1"],["id_smart_contract", "int64", "1"],["date_submission_draft", "time", "1"],["text_name", "text", "0"]]',
 			permissions: "$citizen == #wallet_id#"
 			}
 	   },
@@ -959,7 +1001,7 @@ Desc: "General Elections and votes in the Legislature",
 			typeid: #type_new_table_id#,
 			global: 0,
 			table_name : "sl_result",
-			columns: '[["percents", "int64", "1"],["id_laws_edition", "int64", "1"],["value", "int64", "1"],["choise", "text", "0"]]',
+			columns: '[["value", "int64", "1"],["choise", "text", "0"],["percents", "int64", "1"],["id_laws_edition", "int64", "1"]]',
 			permissions: "$citizen == #wallet_id#"
 			}
 	   },
@@ -970,7 +1012,7 @@ Desc: "General Elections and votes in the Legislature",
 			typeid: #type_new_table_id#,
 			global: 0,
 			table_name : "sl_votes",
-			columns: '[["laws_id", "int64", "1"],["id_voting", "int64", "1"],["citizen_id", "int64", "1"],["citizen_name", "text", "0"],["time", "time", "0"],["choice", "int64", "1"]]',
+			columns: '[["choice", "int64", "1"],["laws_id", "int64", "1"],["id_voting", "int64", "1"],["citizen_id", "int64", "1"],["citizen_name", "text", "0"],["time", "time", "0"]]',
 			permissions: "$citizen == #wallet_id#"
 			}
 	   },
@@ -980,8 +1022,8 @@ Desc: "General Elections and votes in the Legislature",
 			type: "NewContract",
 			typeid: #type_new_contract_id#,
 			global: 0,
-			name: " SLStartVoting",
-			value: $("#sc_ SLStartVoting").val(),
+			name: "SLStartVoting",
+			value: $("#sc_SLStartVoting").val(),
 			conditions: $("#sc_conditions").val()
 			}
 	   },
@@ -1346,27 +1388,7 @@ Desc: "General Elections and votes in the Legislature",
 			conditions: "$citizen == #wallet_id#",
 			}
 	   },
-	   	{
-            Forsign: 'global,name,value',
-            Data: {
-            	type: "AppendMenu",
-            	typeid: #type_append_menu_id#,
-            	name : "government",
-            	value: $("#menu_1").val(),
-            	global: 0
-            }
-       },
-       {
-             Forsign: 'global,name,value',
-             Data: {
-             	type: "AppendMenu",
-             	typeid: #type_append_menu_id#,
-             	name : "government",
-             	value: $("#menu_2").val(),
-             	global: 0
-             }
-       },
-    {
+{
 		Forsign: 'global,name,value,menu,conditions',
 		Data: {
 			type: "NewPage",
@@ -1377,5 +1399,15 @@ Desc: "General Elections and votes in the Legislature",
 			global: 0,
 			conditions: "$citizen == #wallet_id#",
 			}
-	   }]`
+	   },
+{
+			Forsign: 'global,name,value',
+			Data: {
+				type: "AppendMenu",
+				typeid: #type_append_menu_id#,
+				name : "government",
+				value: $("#am_government").val(),
+				global: 0
+				}
+		}]`
 )
